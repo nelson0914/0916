@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HSIEH - 當前即時時間 & 個人主頁 (Current Time Live)</title>
+  <meta name="description" content="HSIEH 的個人專屬首頁，搭載每秒即時動態更新的精準時鐘、日期與世界時區。" />
+  
+  <!-- Modern Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Outfit:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --bg-gradient: radial-gradient(circle at 15% 15%, rgba(99, 102, 241, 0.18), transparent 45%),
+                     radial-gradient(circle at 85% 85%, rgba(236, 72, 153, 0.15), transparent 45%),
+                     radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.08), transparent 50%),
+                     #090d16;
+      --card-bg: rgba(18, 24, 38, 0.75);
+      --card-border: rgba(255, 255, 255, 0.1);
+      --card-hover-border: rgba(129, 140, 248, 0.4);
+      --text-primary: #ffffff;
+      --text-secondary: #cbd5e1;
+      --text-muted: #94a3b8;
+      --accent-glow: rgba(99, 102, 241, 0.5);
+      --accent-primary: #6366f1;
+      --accent-secondary: #ec4899;
+      --accent-emerald: #10b981;
+      --font-display: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+      --glass-blur: blur(24px);
+      --shadow-subtle: 0 20px 45px -10px rgba(0, 0, 0, 0.6);
+    }
+
+    [data-theme="cyber"] {
+      --bg-gradient: radial-gradient(circle at 20% 20%, rgba(6, 182, 212, 0.22), transparent 40%),
+                     radial-gradient(circle at 80% 80%, rgba(217, 70, 239, 0.2), transparent 40%),
+                     #050811;
+      --card-bg: rgba(10, 15, 29, 0.85);
+      --card-border: rgba(6, 182, 212, 0.25);
+      --card-hover-border: rgba(217, 70, 239, 0.6);
+      --text-primary: #ffffff;
+      --accent-primary: #06b6d4;
+      --accent-secondary: #d946ef;
+      --accent-glow: rgba(6, 182, 212, 0.5);
+    }
+
+    [data-theme="light"] {
+      --bg-gradient: radial-gradient(circle at 10% 10%, rgba(99, 102, 241, 0.12), transparent 40%),
+                     radial-gradient(circle at 90% 90%, rgba(236, 72, 153, 0.1), transparent 40%),
+                     #f1f5f9;
+      --card-bg: rgba(255, 255, 255, 0.92);
+      --card-border: rgba(203, 213, 225, 0.9);
+      --card-hover-border: rgba(99, 102, 241, 0.4);
+      --text-primary: #0f172a;
+      --text-secondary: #334155;
+      --text-muted: #64748b;
+      --accent-glow: rgba(99, 102, 241, 0.2);
+      --shadow-subtle: 0 15px 35px -10px rgba(0, 0, 0, 0.1);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      min-height: 100vh;
+      background: var(--bg-gradient);
+      background-attachment: fixed;
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      line-height: 1.6;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1.5rem;
+      position: relative;
+      overflow-x: hidden;
+      transition: background 0.3s ease, color 0.3s ease;
+    }
+
+    /* Ambient Background Canvas */
+    #ambient-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.6;
+    }
+
+    /* Navigation Bar */
+    .top-bar {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      max-width: 1000px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      padding: 0.75rem 1.25rem;
+      background: var(--card-bg);
+      backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--card-border);
+      border-radius: 9999px;
+      box-shadow: var(--shadow-subtle);
+    }
+
+    .brand-pill {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 1rem;
+      letter-spacing: -0.01em;
+    }
+
+    .brand-dot {
+      width: 10px;
+      height: 10px;
+      background: var(--accent-emerald);
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--accent-emerald);
+      animation: pulse-dot 1.5s infinite ease-in-out;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.3; transform: scale(0.75); }
+    }
+
+    .live-status-pill {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      color: #34d399;
+      font-size: 0.78rem;
+      font-weight: 700;
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+      font-family: var(--font-mono);
+    }
+
+    .controls-group {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .action-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--card-border);
+      color: var(--text-primary);
+      padding: 0.4rem 0.85rem;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: all 0.2s ease;
+      font-family: var(--font-sans);
+    }
+
+    .action-btn:hover {
+      background: rgba(255, 255, 255, 0.16);
+      border-color: var(--card-hover-border);
+      transform: translateY(-1px);
+    }
+
+    /* Main Container */
+    .dashboard-container {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      max-width: 1000px;
+      display: flex;
+      flex-direction: column;
+      gap: 1.75rem;
+    }
+
+    /* Hero Profile Card */
+    .hero-card {
+      background: var(--card-bg);
+      backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--card-border);
+      border-radius: 28px;
+      padding: 2.5rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+      box-shadow: var(--shadow-subtle);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary), var(--accent-emerald));
+    }
+
+    .avatar-wrapper {
+      position: relative;
+      width: 95px;
+      height: 95px;
+      flex-shrink: 0;
+    }
+
+    .avatar-glow {
+      position: absolute;
+      inset: -4px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+      filter: blur(10px);
+      opacity: 0.8;
+      animation: rotate-glow 8s linear infinite;
+    }
+
+    @keyframes rotate-glow {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .avatar-circle {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: #0b1120;
+      border: 3px solid rgba(255, 255, 255, 0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-display);
+      font-size: 2.5rem;
+      font-weight: 800;
+      color: #ffffff;
+      user-select: none;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+    }
+
+    .profile-info {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      flex-grow: 1;
+    }
+
+    .greeting-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.88rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--accent-primary);
+    }
+
+    .name-heading {
+      font-family: var(--font-display);
+      font-size: 3.2rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.05;
+      background: linear-gradient(135deg, #ffffff 40%, var(--text-secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    [data-theme="light"] .name-heading {
+      background: linear-gradient(135deg, #0f172a 40%, #475569);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .bio-tagline {
+      font-size: 1.05rem;
+      color: var(--text-secondary);
+      max-width: 600px;
+    }
+
+    /* ===================================================
+       PROMINENT LIVE CLOCK SHOWCASE (CENTERPIECE)
+       =================================================== */
+    .clock-hero-card {
+      background: var(--card-bg);
+      backdrop-filter: var(--glass-blur);
+      border: 2px solid rgba(99, 102, 241, 0.3);
+      border-radius: 32px;
+      padding: 3rem 2rem;
+      box-shadow: 0 25px 50px -12px rgba(99, 102, 241, 0.25), var(--shadow-subtle);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      position: relative;
+    }
+
+    .clock-title-badge {
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      color: #c7d2fe;
+      background: rgba(99, 102, 241, 0.2);
+      border: 1px solid rgba(99, 102, 241, 0.4);
+      padding: 0.4rem 1.2rem;
+      border-radius: 999px;
+      margin-bottom: 1.5rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .clock-display-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: center;
+      gap: 0.4rem;
+      margin-bottom: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .time-digits {
+      font-family: var(--font-mono);
+      font-size: 6rem;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 1;
+      color: #ffffff;
+      text-shadow: 0 0 40px var(--accent-glow);
+    }
+
+    [data-theme="light"] .time-digits {
+      color: #0f172a;
+      text-shadow: 0 0 30px rgba(99, 102, 241, 0.25);
+    }
+
+    .colon-separator {
+      display: inline-block;
+      animation: blink-colon 1s infinite;
+      color: var(--accent-primary);
+      margin: 0 0.1rem;
+    }
+
+    @keyframes blink-colon {
+      0%, 49% { opacity: 1; }
+      50%, 100% { opacity: 0.25; }
+    }
+
+    .time-seconds-box {
+      font-family: var(--font-mono);
+      font-size: 3.5rem;
+      font-weight: 700;
+      color: var(--accent-secondary);
+      text-shadow: 0 0 25px rgba(236, 72, 153, 0.6);
+      display: flex;
+      align-items: baseline;
+    }
+
+    .time-period-tag {
+      font-family: var(--font-display);
+      font-size: 2rem;
+      font-weight: 800;
+      color: #818cf8;
+      margin-left: 0.6rem;
+      text-transform: uppercase;
+    }
+
+    .time-millis {
+      font-family: var(--font-mono);
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--accent-emerald);
+      min-width: 3.5ch;
+      text-align: left;
+      margin-left: 0.2rem;
+    }
+
+    /* Live Date Display */
+    .full-date-display {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-top: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .timezone-chip {
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 0.25rem 0.75rem;
+      border-radius: 8px;
+      background: rgba(99, 102, 241, 0.15);
+      border: 1px solid rgba(99, 102, 241, 0.35);
+      color: #a5b4fc;
+    }
+
+    /* Live Second Progress Stream */
+    .second-stream-container {
+      width: 100%;
+      max-width: 650px;
+      margin-top: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .stream-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      font-family: var(--font-mono);
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .stream-bar-track {
+      width: 100%;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .stream-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+      border-radius: 999px;
+      box-shadow: 0 0 15px var(--accent-secondary);
+    }
+
+    /* Day Progress Section */
+    .day-progress-wrap {
+      width: 100%;
+      max-width: 650px;
+      margin-top: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    /* Grid of Secondary Cards */
+    .widgets-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .widget-card {
+      background: var(--card-bg);
+      backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--card-border);
+      border-radius: 24px;
+      padding: 1.75rem;
+      box-shadow: var(--shadow-subtle);
+      transition: all 0.3s ease;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .widget-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.25rem;
+    }
+
+    .widget-title {
+      font-family: var(--font-display);
+      font-size: 1.15rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .world-clocks-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+    }
+
+    .world-clock-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem 1rem;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+    }
+
+    .city-name {
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+
+    .city-offset {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .city-time {
+      font-family: var(--font-mono);
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--accent-primary);
+    }
+
+    .note-textarea {
+      width: 100%;
+      height: 120px;
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 0.85rem;
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      font-size: 0.9rem;
+      resize: none;
+      outline: none;
+    }
+
+    [data-theme="light"] .note-textarea {
+      background: rgba(255, 255, 255, 0.7);
+    }
+
+    footer {
+      position: relative;
+      z-index: 10;
+      margin-top: 2.5rem;
+      color: var(--text-muted);
+      font-size: 0.82rem;
+      text-align: center;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .hero-card {
+        flex-direction: column;
+        text-align: center;
+        padding: 2rem 1.5rem;
+      }
+      .time-digits {
+        font-size: 3.8rem;
+      }
+      .time-seconds-box {
+        font-size: 2.5rem;
+      }
+      .clock-hero-card {
+        padding: 2rem 1.25rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Ambient Particle Canvas -->
+  <canvas id="ambient-canvas"></canvas>
+
+  <!-- Navigation Bar -->
+  <header class="top-bar">
+    <div class="brand-pill">
+      <span class="brand-dot"></span>
+      <span>HSIEH • PERSONAL SPACE</span>
+    </div>
+
+    <div class="live-status-pill">
+      <span>●</span>
+      <span>每秒即時更新 (RENEWING LIVE)</span>
+    </div>
+
+    <div class="controls-group">
+      <button class="action-btn" id="format-toggle-btn" title="切換 12/24 小時制">
+        <span>🕒</span>
+        <span id="format-label">切換 24H</span>
+      </button>
+
+      <button class="action-btn" id="theme-btn" title="切換風格">
+        <span id="theme-icon">🌌</span>
+        <span id="theme-label">Cosmos</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="dashboard-container">
+    
+    <!-- Hero Profile Card with HSIEH and Live Time Tag -->
+    <section class="hero-card">
+      <div class="avatar-wrapper">
+        <div class="avatar-glow"></div>
+        <div class="avatar-circle">H</div>
+      </div>
+
+      <div class="profile-info">
+        <div class="greeting-pill">
+          <span id="greeting-icon">☀️</span>
+          <span id="greeting-text">早安 GOOD MORNING, HSIEH</span>
+        </div>
+        
+        <h1 class="name-heading" id="user-name">HSIEH</h1>
+        
+        <p class="bio-tagline">
+          Developer & Creator • Exploring ideas, building experiences.
+        </p>
+
+        <!-- Current time pill directly in hero -->
+        <div style="margin-top: 0.75rem; display: inline-flex; align-items: center; gap: 0.6rem; background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.35); padding: 0.45rem 1rem; border-radius: 12px; width: fit-content;">
+          <span style="font-size: 0.8rem; font-weight: 700; color: #a5b4fc; letter-spacing: 0.05em;">當前時間 CURRENT TIME:</span>
+          <span id="hero-clock-display" style="font-family: var(--font-mono); font-size: 1.35rem; font-weight: 800; color: #ffffff;">10:35:00 AM</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Prominent Real-Time Clock Showcase -->
+    <section class="clock-hero-card">
+      <div class="clock-title-badge">
+        <span>⚡</span>
+        <span>當前精準時間 • REAL-TIME CONTINUOUS CLOCK</span>
+      </div>
+      
+      <!-- Big Numbers Display -->
+      <div class="clock-display-row">
+        <div class="time-digits">
+          <span id="clock-hours">10</span><span class="colon-separator">:</span><span id="clock-minutes">35</span>
+        </div>
+        
+        <div class="time-seconds-box">
+          <span class="colon-separator">:</span>
+          <span id="clock-seconds">00</span>
+        </div>
+
+        <div class="time-period-tag" id="clock-period">AM</div>
+        
+        <div class="time-millis" id="clock-millis">.00</div>
+      </div>
+
+      <!-- Live Full Date -->
+      <div class="full-date-display">
+        <span id="date-full">2026年9月16日</span>
+        <span id="date-weekday" style="color: var(--accent-primary);">(星期三 Wednesday)</span>
+        <span class="timezone-chip" id="clock-tz-name">Local Time (GMT+8)</span>
+      </div>
+
+      <!-- Second by Second Flow Stream -->
+      <div class="second-stream-container">
+        <div class="stream-labels">
+          <span>每秒動態更新流 (SECOND BY SECOND)</span>
+          <span id="second-pct-label" style="color: var(--accent-secondary);">00s / 60s</span>
+        </div>
+        <div class="stream-bar-track">
+          <div class="stream-bar-fill" id="second-progress-bar"></div>
+        </div>
+      </div>
+
+      <!-- Day Completion Progress -->
+      <div class="day-progress-wrap">
+        <div class="stream-labels">
+          <span>今日已過時間進度 (DAY CYCLE)</span>
+          <span id="day-pct-label">0% COMPLETED</span>
+        </div>
+        <div class="stream-bar-track">
+          <div class="stream-bar-fill" id="day-progress-bar" style="background: linear-gradient(90deg, var(--accent-primary), var(--accent-emerald)); box-shadow: 0 0 15px var(--accent-emerald);"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Secondary Widgets -->
+    <section class="widgets-grid">
+      
+      <!-- World Clocks -->
+      <article class="widget-card">
+        <div class="widget-header">
+          <h2 class="widget-title"><span>🌍</span> 全球各大城市即時時間</h2>
+          <span class="timezone-chip">UTC SYNC</span>
+        </div>
+        
+        <div class="world-clocks-list">
+          <div class="world-clock-item">
+            <div>
+              <div class="city-name">東京 Tokyo</div>
+              <div class="city-offset">UTC+9</div>
+            </div>
+            <div class="city-time" id="time-tokyo">--:--:--</div>
+          </div>
+
+          <div class="world-clock-item">
+            <div>
+              <div class="city-name">倫敦 London</div>
+              <div class="city-offset">UTC+1</div>
+            </div>
+            <div class="city-time" id="time-london">--:--:--</div>
+          </div>
+
+          <div class="world-clock-item">
+            <div>
+              <div class="city-name">紐約 New York</div>
+              <div class="city-offset">UTC-4</div>
+            </div>
+            <div class="city-time" id="time-ny">--:--:--</div>
+          </div>
+
+          <div class="world-clock-item">
+            <div>
+              <div class="city-name">舊金山 San Francisco</div>
+              <div class="city-offset">UTC-7</div>
+            </div>
+            <div class="city-time" id="time-sf">--:--:--</div>
+          </div>
+        </div>
+      </article>
+
+      <!-- Today's Focus Note -->
+      <article class="widget-card">
+        <div class="widget-header">
+          <h2 class="widget-title"><span>🎯</span> 今日焦點與筆記 (Focus)</h2>
+          <span style="font-size: 0.75rem; color: #10b981;">✓ 自動保存</span>
+        </div>
+        
+        <textarea 
+          class="note-textarea" 
+          id="focus-notepad" 
+          placeholder="在此記錄今天的目標或即時想法...（隨打即存）"
+          spellcheck="false"
+        ></textarea>
+
+        <div style="margin-top: 1rem; display: flex; gap: 0.5rem; justify-content: flex-end;">
+          <button class="action-btn" id="copy-time-btn" title="複製當前精準時間字串">
+            <span>📋</span>
+            <span id="copy-btn-text">複製當前時間</span>
+          </button>
+        </div>
+      </article>
+
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <p>HSIEH's Personal Space • Real-Time Dynamic Clock Dashboard</p>
+    <p style="opacity: 0.6; margin-top: 0.25rem;">時間每秒連續動態更新 • 全環境無依賴相容</p>
+  </footer>
+
+  <script>
+    // --- Clock State ---
+    let is24Hour = false;
+
+    // DOM Elements
+    const clockHoursEl = document.getElementById('clock-hours');
+    const clockMinutesEl = document.getElementById('clock-minutes');
+    const clockSecondsEl = document.getElementById('clock-seconds');
+    const clockPeriodEl = document.getElementById('clock-period');
+    const clockMillisEl = document.getElementById('clock-millis');
+    const heroClockDisplay = document.getElementById('hero-clock-display');
+    const dateFullEl = document.getElementById('date-full');
+    const dateWeekdayEl = document.getElementById('date-weekday');
+    const clockTzName = document.getElementById('clock-tz-name');
+    const secondProgressBar = document.getElementById('second-progress-bar');
+    const secondPctLabel = document.getElementById('second-pct-label');
+    const dayProgressBar = document.getElementById('day-progress-bar');
+    const dayPctLabel = document.getElementById('day-pct-label');
+    const greetingTextEl = document.getElementById('greeting-text');
+    const greetingIconEl = document.getElementById('greeting-icon');
+    const formatToggleBtn = document.getElementById('format-toggle-btn');
+    const formatLabel = document.getElementById('format-label');
+    const themeBtn = document.getElementById('theme-btn');
+    const themeIcon = document.getElementById('theme-icon');
+    const themeLabel = document.getElementById('theme-label');
+    const focusNotepad = document.getElementById('focus-notepad');
+    const copyTimeBtn = document.getElementById('copy-time-btn');
+    const copyBtnText = document.getElementById('copy-btn-text');
+
+    // --- Core Time Update Function (Guaranteed to renew every second) ---
+    function updateClock() {
+      try {
+        const now = new Date();
+        const rawHours = now.getHours();
+        const rawMinutes = now.getMinutes();
+        const rawSeconds = now.getSeconds();
+        const millis = now.getMilliseconds();
+        const millisTwoDigits = Math.floor(millis / 10);
+        const isPm = rawHours >= 12;
+
+        // 12H vs 24H
+        let displayHours = rawHours;
+        if (!is24Hour) {
+          displayHours = rawHours % 12;
+          if (displayHours === 0) displayHours = 12;
+        }
+
+        const hStr = String(displayHours).padStart(2, '0');
+        const mStr = String(rawMinutes).padStart(2, '0');
+        const sStr = String(rawSeconds).padStart(2, '0');
+        const msStr = '.' + String(millisTwoDigits).padStart(2, '0');
+        const periodStr = isPm ? 'PM' : 'AM';
+
+        // 1. Update Centerpiece Digits
+        if (clockHoursEl) clockHoursEl.textContent = hStr;
+        if (clockMinutesEl) clockMinutesEl.textContent = mStr;
+        if (clockSecondsEl) clockSecondsEl.textContent = sStr;
+        if (clockPeriodEl) {
+          clockPeriodEl.style.display = is24Hour ? 'none' : 'inline-block';
+          clockPeriodEl.textContent = periodStr;
+        }
+        if (clockMillisEl) clockMillisEl.textContent = msStr;
+
+        // 2. Update Hero Banner Clock
+        if (heroClockDisplay) {
+          heroClockDisplay.textContent = `${hStr}:${mStr}:${sStr} ${!is24Hour ? periodStr : ''}`;
+        }
+
+        // 3. Update Second Bar
+        if (secondProgressBar) {
+          const secondPct = ((rawSeconds + millis / 1000) / 60) * 100;
+          secondProgressBar.style.width = secondPct.toFixed(2) + '%';
+        }
+        if (secondPctLabel) {
+          secondPctLabel.textContent = `${sStr}s / 60s`;
+        }
+
+        // 4. Update Full Date
+        const weekdays = ['(星期日 Sunday)', '(星期一 Monday)', '(星期二 Tuesday)', '(星期三 Wednesday)', '(星期四 Thursday)', '(星期五 Friday)', '(星期六 Saturday)'];
+        if (dateFullEl) dateFullEl.textContent = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日`;
+        if (dateWeekdayEl) dateWeekdayEl.textContent = weekdays[now.getDay()];
+
+        // 5. Update Timezone
+        try {
+          const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+          const offsetMin = -now.getTimezoneOffset();
+          const sign = offsetMin >= 0 ? '+' : '-';
+          const offsetH = Math.floor(Math.abs(offsetMin) / 60);
+          if (clockTzName) clockTzName.textContent = `${tz.split('/').pop().replace('_', ' ')} (UTC${sign}${offsetH})`;
+        } catch (e) {}
+
+        // 6. Dynamic Greeting with HSIEH
+        if (greetingTextEl && greetingIconEl) {
+          if (rawHours >= 5 && rawHours < 12) {
+            greetingIconEl.textContent = '☀️';
+            greetingTextEl.textContent = '早安 GOOD MORNING, HSIEH';
+          } else if (rawHours >= 12 && rawHours < 18) {
+            greetingIconEl.textContent = '🌤️';
+            greetingTextEl.textContent = '午安 GOOD AFTERNOON, HSIEH';
+          } else if (rawHours >= 18 && rawHours < 22) {
+            greetingIconEl.textContent = '🌆';
+            greetingTextEl.textContent = '晚安 GOOD EVENING, HSIEH';
+          } else {
+            greetingIconEl.textContent = '🌙';
+            greetingTextEl.textContent = '夜深了 GOOD NIGHT, HSIEH';
+          }
+        }
+
+        // 7. Day Progress Bar
+        if (dayProgressBar && dayPctLabel) {
+          const secondsPassed = (rawHours * 3600) + (rawMinutes * 60) + rawSeconds;
+          const dayPct = ((secondsPassed / 86400) * 100).toFixed(2);
+          dayProgressBar.style.width = dayPct + '%';
+          dayPctLabel.textContent = `${dayPct}% 已完成 (COMPLETED)`;
+        }
+
+        // 8. World Clocks
+        updateWorldClock('time-tokyo', 'Asia/Tokyo');
+        updateWorldClock('time-london', 'Europe/London');
+        updateWorldClock('time-ny', 'America/New_York');
+        updateWorldClock('time-sf', 'America/Los_Angeles');
+
+      } catch (err) {
+        console.error('Clock update error:', err);
+      }
+    }
+
+    function updateWorldClock(id, timeZone) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      try {
+        el.textContent = new Intl.DateTimeFormat('en-US', {
+          timeZone,
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: !is24Hour
+        }).format(new Date());
+      } catch (e) {
+        el.textContent = '--:--:--';
+      }
+    }
+
+    // --- Start Dynamic Clock Loop ---
+    // 1. Immediate call
+    updateClock();
+
+    // 2. High-precision Interval: runs every 50ms to ensure second transitions without lag
+    setInterval(updateClock, 50);
+
+    // 3. Animation frame loop
+    function loop() {
+      updateClock();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+
+    // --- Controls & Toggles ---
+    if (formatToggleBtn) {
+      formatToggleBtn.addEventListener('click', () => {
+        is24Hour = !is24Hour;
+        if (formatLabel) formatLabel.textContent = is24Hour ? '切換 12H' : '切換 24H';
+        updateClock();
+      });
+    }
+
+    // Copy timestamp button
+    if (copyTimeBtn) {
+      copyTimeBtn.addEventListener('click', () => {
+        const now = new Date();
+        const timeText = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${now.toTimeString().split(' ')[0]}`;
+        navigator.clipboard.writeText(timeText).then(() => {
+          copyBtnText.textContent = '已複製 ✓';
+          setTimeout(() => copyBtnText.textContent = '複製當前時間', 1800);
+        }).catch(() => {
+          copyBtnText.textContent = timeText;
+        });
+      });
+    }
+
+    // Notepad storage with try-catch
+    try {
+      const savedNote = localStorage.getItem('hsieh_notepad');
+      if (savedNote && focusNotepad) focusNotepad.value = savedNote;
+      if (focusNotepad) {
+        focusNotepad.addEventListener('input', () => {
+          try { localStorage.setItem('hsieh_notepad', focusNotepad.value); } catch(e){}
+        });
+      }
+    } catch(e) {}
+
+    // Theme toggling
+    const themes = [
+      { id: 'cosmos', icon: '🌌', label: 'Cosmos' },
+      { id: 'cyber', icon: '⚡', label: 'Cyber' },
+      { id: 'light', icon: '☀️', label: 'Daylight' }
+    ];
+    let themeIdx = 0;
+    try {
+      const savedTheme = localStorage.getItem('hsieh_theme');
+      if (savedTheme) {
+        const idx = themes.findIndex(t => t.id === savedTheme);
+        if (idx !== -1) themeIdx = idx;
+      }
+    } catch(e) {}
+
+    function applyTheme(theme) {
+      document.body.removeAttribute('data-theme');
+      if (theme.id !== 'cosmos') {
+        document.body.setAttribute('data-theme', theme.id);
+      }
+      if (themeIcon) themeIcon.textContent = theme.icon;
+      if (themeLabel) themeLabel.textContent = theme.label;
+      try { localStorage.setItem('hsieh_theme', theme.id); } catch(e){}
+    }
+    applyTheme(themes[themeIdx]);
+
+    if (themeBtn) {
+      themeBtn.addEventListener('click', () => {
+        themeIdx = (themeIdx + 1) % themes.length;
+        applyTheme(themes[themeIdx]);
+      });
+    }
+
+    // --- Particle Background ---
+    const canvas = document.getElementById('ambient-canvas');
+    const ctx = canvas ? canvas.getContext('2d') : null;
+    if (ctx) {
+      let particles = [];
+      let w = window.innerWidth;
+      let h = window.innerHeight;
+
+      function resize() {
+        w = canvas.width = window.innerWidth;
+        h = canvas.height = window.innerHeight;
+        particles = [];
+        const count = Math.floor(w / 25);
+        for (let i = 0; i < count; i++) {
+          particles.push({
+            x: Math.random() * w,
+            y: Math.random() * h,
+            r: Math.random() * 2 + 0.6,
+            vx: (Math.random() - 0.5) * 0.35,
+            vy: (Math.random() - 0.5) * 0.35,
+            alpha: Math.random() * 0.4 + 0.15
+          });
+        }
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, w, h);
+        ctx.fillStyle = '#ffffff';
+        particles.forEach(p => {
+          p.x += p.vx;
+          p.y += p.vy;
+          if (p.x < 0) p.x = w;
+          if (p.x > w) p.x = 0;
+          if (p.y < 0) p.y = h;
+          if (p.y > h) p.y = 0;
+          ctx.globalAlpha = p.alpha;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        requestAnimationFrame(draw);
+      }
+
+      window.addEventListener('resize', resize);
+      resize();
+      draw();
+    }
+  </script>
+</body>
+</html>
